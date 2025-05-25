@@ -1,83 +1,65 @@
+# rest/serializers.py
 from rest_framework import serializers
-from .models import News, NewsCategory, PageImage, Tag, Page
+from .models import Page, Tag, Content, ContentImage, ContentText
 
 
-class NewsSubCategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = NewsCategory
-        fields = ['id', 'name', 'slug']
-
-
-class NewsCategorySerializer(serializers.ModelSerializer):
-    category_url = serializers.SerializerMethodField()
+class PageNavigationSerializer(serializers.ModelSerializer):
+    children = serializers.SerializerMethodField()
 
     class Meta:
-        model = NewsCategory
-        fields = ['id', 'name', 'slug', 'category_url', ]
+        model = Page
+        fields = ['id', 'title', 'slug', 'children']
 
-    def get_category_url(self, obj):
-        return self.context['request'].build_absolute_uri(f'/categories/news/{obj.slug}/')
+    def get_children(self, obj):
+        # Recursively serialize children (subpages) that are published
+        children = obj.children.filter(is_published=True)
+        return PageNavigationSerializer(children, many=True, context=self.context).data
 
 
 class TagSerializer(serializers.ModelSerializer):
-    tag_url = serializers.SerializerMethodField()
-
     class Meta:
         model = Tag
-        fields = ['id', 'name', 'slug', 'tag_url']
-
-    def get_tag_url(self, obj):
-        return self.context['request'].build_absolute_uri(f'/tags/{obj.slug}/')
+        fields = ['id', 'name', 'slug']
 
 
-class NewsSerializer(serializers.ModelSerializer):
-    category = NewsCategorySerializer(read_only=True)
-    tags = TagSerializer(many=True, read_only=True)
+class ContentImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
-    news_url = serializers.SerializerMethodField()
 
     class Meta:
-        model = News
-        fields = [
-            'id', 'title', 'slug', 'content', 'image_url', 'news_url',
-            'category', 'tags', 'published_at', 'updated_at'
-        ]
+        model = ContentImage
+        fields = ['id', 'image', 'image_url', 'text', 'order']
 
     def get_image_url(self, obj):
-        if obj.image:
-            return self.context['request'].build_absolute_uri(obj.image.url)
-        return None
-
-    def get_news_url(self, obj):
-        return self.context['request'].build_absolute_uri(f'/news/{obj.slug}/')
+        return obj.image.url if obj.image else None
 
 
-class PageImageSerializer(serializers.ModelSerializer):
+class ContentTextSerializer(serializers.ModelSerializer):
     class Meta:
-        model = PageImage
-        fields = ['id', 'image', 'text', 'order']
-        read_only_fields = ['id']
+        model = ContentText
+        fields = ['id', 'text', 'order']
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        if instance.image:
-            representation['image'] = instance.image.url
-        return representation
+
+class ContentSerializer(serializers.ModelSerializer):
+    tags = TagSerializer(many=True, read_only=True)
+    images = ContentImageSerializer(many=True, read_only=True)
+    texts = ContentTextSerializer(many=True, read_only=True)
+    page_title = serializers.CharField(source='page.title', read_only=True)
+
+    class Meta:
+        model = Content
+        fields = ['id', 'title', 'slug', 'tags',
+                  'page', 'page_title', 'images', 'texts']
 
 
 class PageSerializer(serializers.ModelSerializer):
-    images = PageImageSerializer(many=True, read_only=True)
+    contents = ContentSerializer(many=True, read_only=True)
+    template_display = serializers.CharField(
+        source='get_template_display', read_only=True)
+    children = PageNavigationSerializer(many=True, read_only=True)
 
     class Meta:
         model = Page
         fields = [
-            'id', 'title', 'subtitle', 'slug', 'body', 'template',
-            'is_published', 'created_at', 'updated_at', 'images'
+            'id', 'title', 'subtitle', 'slug', 'template', 'template_display',
+            'is_published', 'created_at', 'updated_at', 'contents', 'children'
         ]
-        read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
-
-
-class PageUrlSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Page
-        fields = ['id', 'name', 'slug']
