@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.utils.text import slugify
+from django_ckeditor_5.fields import CKEditor5Field
 
 
 class Page(models.Model):
@@ -92,11 +93,11 @@ class ContentImage(models.Model):
         return f"Image for {self.content.title} ({self.order})"
 
 
-class ContentText(models.Model):  # Renamed to ContentText (singular)
+class ContentText(models.Model):
     content = models.ForeignKey(
         Content, on_delete=models.CASCADE, related_name='texts')
-    text = models.TextField(blank=True, help_text="Text content")
-    order = models.IntegerField(default=0, help_text="Order of display")
+    text = CKEditor5Field('Text content', config_name='extends')
+    order = models.IntegerField(default=0)
 
     class Meta:
         ordering = ['order']
