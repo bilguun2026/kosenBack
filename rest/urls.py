@@ -2,7 +2,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    PageViewSet, TagViewSet, ContentViewSet,
+    CarouselContentListView, PageViewSet, TagViewSet, ContentViewSet,
     ContentImageViewSet, ContentTextViewSet, PageNavigationViewSet
 )
 
@@ -17,4 +17,6 @@ router.register(r'page-navigation', PageNavigationViewSet,
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('carousel/', CarouselContentListView.as_view(),
+         name='carousel-contents'),
 ]

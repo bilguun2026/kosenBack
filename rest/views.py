@@ -1,11 +1,12 @@
 # rest/views.py
 from rest_framework import viewsets
+from rest_framework import generics
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from .models import Page, Tag, Content, ContentImage, ContentText
 from .serializers import (
-    PageSerializer, TagSerializer, ContentSerializer,
+    ContentListSerializer, PageSerializer, TagSerializer, ContentSerializer,
     ContentImageSerializer, ContentTextSerializer, PageNavigationSerializer
 )
 
@@ -59,16 +60,25 @@ class TagViewSet(viewsets.ModelViewSet):
 
 class ContentViewSet(viewsets.ModelViewSet):
     queryset = Content.objects.all()
-    serializer_class = ContentSerializer
     permission_classes = [ReadOnlyOrAdminPermission]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['page', 'tags']
-    search_fields = ['title']
-    ordering_fields = ['title', 'page']
+    filterset_fields = ['tags__slug']  # Allow ?tags__name=School
+    search_fields = ['title']  # Disable ?search=
+    ordering_fields = ['title', 'page', 'created_at']
     ordering = ['title']
 
     def get_queryset(self):
-        return Content.objects.select_related('page').prefetch_related('tags', 'images', 'texts')
+        queryset = Content.objects.select_related(
+            'page').prefetch_related('tags', 'images', 'texts')
+        tag_slug = self.request.query_params.get('tag')
+        if tag_slug:
+            queryset = queryset.filter(tags__slug=tag_slug)
+        return queryset
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ContentListSerializer
+        return ContentSerializer
 
 
 class ContentImageViewSet(viewsets.ModelViewSet):
@@ -91,3 +101,8 @@ class ContentTextViewSet(viewsets.ModelViewSet):
     search_fields = ['text']
     ordering_fields = ['order', 'content']
     ordering = ['order']
+
+
+class CarouselContentListView(generics.ListAPIView):
+    queryset = Content.objects.filter(isCarousel=True)
+    serializer_class = ContentSerializer

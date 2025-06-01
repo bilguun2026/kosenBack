@@ -53,10 +53,16 @@ class Tag(models.Model):
 
 class Content(models.Model):
     title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
     slug = models.SlugField(max_length=200, unique=True)
     tags = models.ManyToManyField('Tag', blank=True, related_name='contents')
     page = models.ForeignKey(
-        Page, on_delete=models.CASCADE, related_name='contents')
+        Page, on_delete=models.CASCADE, related_name='contents', null=True, blank=True,)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    isPage = models.BooleanField(
+        default=False, help_text="Indicates if this content is a page or not")
+    isCarousel = models.BooleanField(
+        default=False, help_text="Indicates if this content is a carousel or not")
 
     class Meta:
         ordering = ['title']

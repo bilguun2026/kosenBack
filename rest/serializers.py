@@ -39,6 +39,22 @@ class ContentTextSerializer(serializers.ModelSerializer):
         fields = ['id', 'text', 'order']
 
 
+class ContentListSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    tags = TagSerializer(many=True, read_only=True)
+    created_at = serializers.DateTimeField(format='%Y-%m-%d')
+
+    class Meta:
+        model = Content
+        fields = ['id', 'title', 'image', 'description', 'created_at', 'tags']
+
+    def get_image(self, obj):
+        first_image = obj.images.order_by('order').first()
+        if first_image:
+            return ContentImageSerializer(first_image, context=self.context).data
+        return None
+
+
 class ContentSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     images = ContentImageSerializer(many=True, read_only=True)
@@ -47,7 +63,7 @@ class ContentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Content
-        fields = ['id', 'title', 'slug', 'tags',
+        fields = ['id', 'title', 'description', 'slug', 'tags',
                   'page', 'page_title', 'images', 'texts']
 
 

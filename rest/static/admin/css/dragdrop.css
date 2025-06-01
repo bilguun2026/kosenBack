@@ -1,0 +1,18 @@
+.inline-related tr {
+    transition: background-color 0.2s;
+}
+
+.inline-related tr:hover {
+    background-color: #f8f9fa;
+}
+
+.inline-related .field-order {
+    cursor: move;
+    background: url('/static/admin/img/icon-changelink.svg') no-repeat center;
+    width: 20px;
+    height: 20px;
+}
+
+.inline-related .field-order input {
+    display: none; /* Hide order input for cleaner UI */
+}
