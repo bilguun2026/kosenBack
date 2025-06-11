@@ -1,6 +1,6 @@
 # rest/serializers.py
 from rest_framework import serializers
-from .models import Page, Tag, Content, ContentImage, ContentText
+from .models import Page, Tag, Content, ContentImage, ContentText, VideoUrl
 
 
 class PageNavigationSerializer(serializers.ModelSerializer):
@@ -79,3 +79,11 @@ class PageSerializer(serializers.ModelSerializer):
             'id', 'title', 'subtitle', 'slug', 'template', 'template_display',
             'is_published', 'created_at', 'updated_at', 'contents', 'children'
         ]
+
+
+class VideoSerializer(serializers.ModelSerializer):
+    video_source = serializers.ReadOnlyField()
+
+    class Meta:
+        model = VideoUrl
+        fields = ['id', 'title', 'url', 'video_file', 'video_source']

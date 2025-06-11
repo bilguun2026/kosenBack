@@ -2,12 +2,13 @@
 from rest_framework import viewsets
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.viewsets import ReadOnlyModelViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .models import Page, Tag, Content, ContentImage, ContentText
+from .models import Page, Tag, Content, ContentImage, ContentText, VideoUrl
 from .serializers import (
     ContentListSerializer, PageSerializer, TagSerializer, ContentSerializer,
-    ContentImageSerializer, ContentTextSerializer, PageNavigationSerializer
+    ContentImageSerializer, ContentTextSerializer, PageNavigationSerializer, VideoSerializer
 )
 
 
@@ -106,3 +107,8 @@ class ContentTextViewSet(viewsets.ModelViewSet):
 class CarouselContentListView(generics.ListAPIView):
     queryset = Content.objects.filter(isCarousel=True)
     serializer_class = ContentSerializer
+
+
+class VideoViewSet(ReadOnlyModelViewSet):
+    queryset = VideoUrl.objects.all()
+    serializer_class = VideoSerializer

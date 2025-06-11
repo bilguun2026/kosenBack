@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
-from .models import Page, Tag, Content, ContentImage, ContentText
+from .models import Page, Tag, Content, ContentImage, ContentText, VideoUrl
 from django.forms import Textarea
 
 # Inline for Content within Page
@@ -144,3 +144,17 @@ class ContentTextAdmin(admin.ModelAdmin):
     def text_preview(self, obj):
         return obj.text[:50] + '...' if len(obj.text) > 50 else obj.text
     text_preview.short_description = 'Text'
+
+
+@admin.register(VideoUrl)
+class VideoUrlAdmin(admin.ModelAdmin):
+    list_display = ('title', 'video_source_display')
+    search_fields = ('title',)
+
+    def video_source_display(self, obj):
+        if obj.video_file:
+            return f"Uploaded file: {obj.video_file.url}"
+        elif obj.url:
+            return f"External URL: {obj.url}"
+        return "No video source"
+    video_source_display.short_description = 'Video Source'

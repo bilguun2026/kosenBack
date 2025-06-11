@@ -3,7 +3,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     CarouselContentListView, PageViewSet, TagViewSet, ContentViewSet,
-    ContentImageViewSet, ContentTextViewSet, PageNavigationViewSet
+    ContentImageViewSet, ContentTextViewSet, PageNavigationViewSet, VideoViewSet
 )
 
 router = DefaultRouter()
@@ -12,6 +12,7 @@ router.register(r'tags', TagViewSet)
 router.register(r'contents', ContentViewSet)
 router.register(r'content-images', ContentImageViewSet)
 router.register(r'content-texts', ContentTextViewSet)
+router.register(r'videos', VideoViewSet)
 router.register(r'page-navigation', PageNavigationViewSet,
                 basename='page-navigation')
 

@@ -104,3 +104,21 @@ class ContentText(models.Model):
 
     def __str__(self):
         return f"Text for {self.content.title} ({self.order})"
+
+
+class VideoUrl(models.Model):
+    title = models.CharField(max_length=200, help_text="Title of the video")
+    url = models.URLField(max_length=500, blank=True, null=True,
+                          help_text="External video URL (YouTube, Facebook, etc.)")
+    video_file = models.FileField(upload_to='videos/', blank=True,
+                                  null=True, help_text="Upload video file (mp4, webm, etc.)")
+
+    def __str__(self):
+        return self.title or "Нэргүй видео"
+
+    @property
+    def video_source(self):
+        # Prefer uploaded file if exists, else fallback to URL
+        if self.video_file:
+            return self.video_file.url
+        return self.url
