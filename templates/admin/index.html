@@ -1,0 +1,108 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <!-- cards up here (keep what you already have) -->
+
+  <div class="row g-3">
+
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Сүүлийн хуудсууд</span>
+          <div>
+            <a href="{{ page_add_url }}" class="btn btn-sm btn-outline-primary">
+              <i class="fas fa-plus"></i> Хуудас нэмэх
+            </a>
+            <a href="{{ page_list_url }}" class="btn btn-sm btn-link">
+              Бүгдийг харах
+            </a>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>Гарчиг</th>
+                <th>Загвар</th>
+                <th>Нийтэлсэн</th>
+                <th>Үүсгэсэн</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for page in latest_pages %}
+                <tr>
+                  <td><a href="{{ page.admin_url }}">{{ page.title }}</a></td>
+                  <td>{{ page.get_template_display }}</td>
+                  <td>
+                    {% if page.is_published %}
+                      <span class="badge bg-success">тийм</span>
+                    {% else %}
+                      <span class="badge bg-secondary">үгүй</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ page.created_at|date:"Y-m-d" }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-3">Хуудас алга байна</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Сүүлийн мэдээнүүд</span>
+          <div>
+            <a href="{{ news_add_url }}" class="btn btn-sm btn-outline-primary">
+              <i class="fas fa-plus"></i> Мэдээ нэмэх
+            </a>
+            <a href="{{ news_list_url }}" class="btn btn-sm btn-link">
+              Бүгдийг харах
+            </a>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>Гарчиг</th>
+                <th>Тагууд</th>
+                <th>Үүсгэсэн</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for news in latest_news %}
+                <tr>
+                  <td><a href="{{ news.admin_url }}">{{ news.title }}</a></td>
+                  <td>
+                    {% with news.tags.all as tags %}
+                      {% if tags %}
+                        {% for t in tags %}
+                          <span class="badge bg-light text-dark">{{ t.name }}</span>
+                        {% endfor %}
+                      {% else %}
+                        <span class="text-muted">таггүй</span>
+                      {% endif %}
+                    {% endwith %}
+                  </td>
+                  <td>{{ news.created_at|date:"Y-m-d" }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="text-center text-muted py-3">Мэдээ алга байна</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
