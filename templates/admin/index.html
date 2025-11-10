@@ -4,7 +4,96 @@
 {% block content %}
 <div class="container-fluid">
 
-  <!-- cards up here (keep what you already have) -->
+  <!-- 🟩 Статистик картууд -->
+  <div class="row g-3 mb-4">
+
+    <!-- Нийт хуудсууд -->
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small">Нийт хуудсууд</span>
+            <span class="badge bg-primary">Page</span>
+          </div>
+          <h3 class="mb-1">{{ page_count }}</h3>
+          <p class="mb-0 text-muted small">
+            Нийтэлсэн: <strong>{{ page_published_count }}</strong>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Хуудасны контент (PageContent) -->
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small">Хуудасны контент</span>
+            <span class="badge bg-info text-dark">Content</span>
+          </div>
+          <h3 class="mb-1">{{ pagecontent_count }}</h3>
+          <p class="mb-0 text-muted small">
+            Хуудас дээр харагдах баннер, текст г.м.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Мэдээний контент (NewsContent) -->
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small">Мэдээ / Зар / Мэдээлэл</span>
+            <span class="badge bg-warning text-dark">News</span>
+          </div>
+          <h3 class="mb-1">{{ newscontent_count }}</h3>
+          <p class="mb-0 text-muted small">
+            isPage = False контентууд.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="row g-3 mb-4">
+
+    <!-- Тагууд -->
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small">Тагууд</span>
+            <span class="badge bg-secondary">Tag</span>
+          </div>
+          <h3 class="mb-1">{{ tag_count }}</h3>
+          <p class="mb-0 text-muted small">
+            Мэдээ болон контент дээр ашиглаж байгаа бүх таг.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Видеонууд -->
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small">Видеонууд</span>
+            <span class="badge bg-danger">Video</span>
+          </div>
+          <h3 class="mb-1">{{ video_count }}</h3>
+          <p class="mb-0 text-muted small">
+            VideoUrl загвар дахь нийт бичлэг.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ⬇️ Доорх хэсэгт чиний байсан хүснэгтүүдийг хэвээр нь үлдээлээ -->
 
   <div class="row g-3">
 
@@ -13,7 +102,7 @@
         <div class="card-header d-flex justify-content-between align-items-center">
           <span>Сүүлийн хуудсууд</span>
           <div>
-            <a href="{{ page_add_url }}" class="btn btn-sm btn-outline-primary">
+            <a href="{{ page_add_url }}" class="btn btn-sm btn-outline-success">
               <i class="fas fa-plus"></i> Хуудас нэмэх
             </a>
             <a href="{{ page_list_url }}" class="btn btn-sm btn-link">
@@ -59,7 +148,7 @@
         <div class="card-header d-flex justify-content-between align-items-center">
           <span>Сүүлийн мэдээнүүд</span>
           <div>
-            <a href="{{ news_add_url }}" class="btn btn-sm btn-outline-primary">
+            <a href="{{ news_add_url }}" class="btn btn-sm btn-outline-success">
               <i class="fas fa-plus"></i> Мэдээ нэмэх
             </a>
             <a href="{{ news_list_url }}" class="btn btn-sm btn-link">
