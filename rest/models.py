@@ -181,8 +181,8 @@ class ContentImage(models.Model):
 
     class Meta:
         ordering = ['order']
-        verbose_name = 'Контентийн зураг'
-        verbose_name_plural = 'Контентийн зургууд'
+        verbose_name = 'Баннер'
+        verbose_name_plural = 'Баннерууд'
 
     def __str__(self):
         return f"{self.content.title} - Зураг #{self.order}"
@@ -246,3 +246,17 @@ class VideoUrl(models.Model):
     class Meta:
         verbose_name = 'Видео'
         verbose_name_plural = 'Видеонууд'
+
+
+class PageContent(Content):
+    class Meta:
+        proxy = True
+        verbose_name = "Хуудасны контент"
+        verbose_name_plural = "Хуудасны контентууд"
+
+
+class NewsContent(Content):
+    class Meta:
+        proxy = True
+        verbose_name = "Мэдээ"
+        verbose_name_plural = "Мэдээнүүд"

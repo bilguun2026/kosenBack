@@ -33,6 +33,7 @@ ALLOWED_HOSTS = config("ALLOWED_HOSTS", cast=Csv)
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -248,3 +249,97 @@ CKEDITOR_5_UPLOAD_PATH = "uploads/"
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+
+JAZZMIN_SETTINGS = {
+    "site_title": "Сургуулийн админ",
+    "site_header": "Сургуулийн админ самбар",
+    "site_brand": "Админ",
+    "welcome_sign": "Тавтай морил 🙂",
+    "copyright": "© Logical Growth Hub",
+
+    # Optional: logo if you have one in static
+    # "site_logo": "img/logo.png",
+
+    # Top menu
+    "topmenu_links": [
+        # Dashboard → admin index
+        {"name": "Хяналтын самбар", "url": "admin:index",
+            "permissions": ["auth.view_user"]},
+        # Link to Pages
+        {"model": "yourappname.Page"},
+        # Link to News list
+        {"model": "yourappname.NewsContent"},
+    ],
+
+    # How apps show in the side menu
+    "apps": {
+        "yourappname": {
+            "label": "Агуулга",
+            "icon": "fas fa-layer-group",
+            "models": [
+                {
+                    "model": "yourappname.Page",
+                    "name": "Хуудсууд",
+                    "icon": "fas fa-sitemap",
+                },
+                {
+                    "model": "yourappname.PageContent",
+                    "name": "Хуудасны контент",
+                    "icon": "fas fa-file-alt",
+                },
+                {
+                    "model": "yourappname.NewsContent",
+                    "name": "Мэдээнүүд",
+                    "icon": "fas fa-newspaper",
+                },
+                {
+                    "model": "yourappname.Tag",
+                    "name": "Тагууд",
+                    "icon": "fas fa-tags",
+                },
+                {
+                    "model": "yourappname.VideoUrl",
+                    "name": "Видеонууд",
+                    "icon": "fas fa-video",
+                },
+            ],
+        },
+    },
+
+    "show_ui_builder": False,
+}
+
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-orange",
+    "accent": "accent-navy",
+    "navbar": "navbar-white navbar-light",
+    "no_navbar_border": False,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-light-navy",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
+    "sidebar_nav_compact_style": True,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": True,
+    "theme": "journal",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-outline-primary",
+        "secondary": "btn-outline-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success"
+    },
+    "actions_sticky_top": False
+}

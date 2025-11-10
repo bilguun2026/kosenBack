@@ -1,8 +1,50 @@
-*.pyc
-*.pyo
+# -------------------------
+# Python cache / bytecode
+# -------------------------
 __pycache__/
-migrations/
+*.py[cod]
+*$py.class
+
+# -------------------------
+# Virtual environments
+# -------------------------
+venv/
+.venv/
+env/
+.env.bak
+env.bak/
+
+# -------------------------
+# Environment variables
+# -------------------------
 .env
+
+# -------------------------
+# Django stuff
+# -------------------------
+
+# If you REALLY want to ignore all migrations (not recommended for teams)
+migrations/
+
+# Collected static files (run by collectstatic)
+staticfiles/
+
+# User-uploaded media
 media/
 
-staticfiles/
+# SQLite DB (if you use it locally)
+db.sqlite3
+
+# -------------------------
+# IDE / editor junk
+# -------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# -------------------------
+# OS files
+# -------------------------
+.DS_Store
+Thumbs.db

@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="content">
+  <h1 style="margin-bottom: 24px;">Контентийн төрөл сонгох</h1>
+
+  <p style="margin-bottom: 16px;">
+    Шинэ контент үүсгэхдээ эхлээд төрлөө сонгоно уу:
+  </p>
+
+  <div style="display:flex; gap:16px; flex-wrap:wrap;">
+    <a href="{{ page_url }}"
+       class="button"
+       style="padding: 12px 24px; background:#0b5ed7; color:white; border-radius:6px; text-decoration:none;">
+      🧾 Хуудасны контент үүсгэх
+    </a>
+
+    <a href="{{ news_url }}"
+       class="button"
+       style="padding: 12px 24px; background:#198754; color:white; border-radius:6px; text-decoration:none;">
+      📰 Мэдээ үүсгэх
+    </a>
+  </div>
+
+  <p style="margin-top: 24px;">
+    <a href="../">{% trans "Back to content list" %}</a>
+  </p>
+</div>
+{% endblock %}
