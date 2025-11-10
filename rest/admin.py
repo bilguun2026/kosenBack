@@ -3,6 +3,7 @@ from django.utils.html import format_html
 from django.urls import reverse
 
 from .models import (
+    ImportantURL,
     Page,
     Tag,
     Content,
@@ -75,7 +76,8 @@ class ContentImageInline(admin.StackedInline):
 
 @admin.register(Page)
 class PageAdmin(admin.ModelAdmin):
-    list_display = ("title", "slug", "parent", "template", "is_published", "created_at")
+    list_display = ("title", "slug", "parent", "template",
+                    "is_published", "created_at")
     list_display_links = ("title",)
     list_filter = ("template", "is_published", "parent")
     search_fields = ("title", "subtitle")
@@ -134,7 +136,8 @@ class BaseContentAdmin(admin.ModelAdmin):
         if obj.page_id:
             app_label = Page._meta.app_label
             model_name = Page._meta.model_name
-            url = reverse(f"admin:{app_label}_{model_name}_change", args=[obj.page_id])
+            url = reverse(
+                f"admin:{app_label}_{model_name}_change", args=[obj.page_id])
             return format_html('<a href="{}">{}</a>', url, obj.page.title)
         return "—"
 
@@ -259,3 +262,12 @@ class VideoUrlAdmin(admin.ModelAdmin):
 
     has_url.boolean = True
     has_url.short_description = "URL байна?"
+
+
+@admin.register(ImportantURL)
+class ImportantURLAdmin(admin.ModelAdmin):
+    list_display = ("title", "url",  "is_active", "order")
+    list_editable = ("is_active", "order")
+    search_fields = ("title", "url" )
+    list_filter = ("is_active", )
+    ordering = ("order",)

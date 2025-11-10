@@ -260,3 +260,21 @@ class NewsContent(Content):
         proxy = True
         verbose_name = "Мэдээ"
         verbose_name_plural = "Мэдээнүүд"
+
+
+class ImportantURL(models.Model):
+    title = models.CharField("Холбоосын нэр", max_length=150)
+    url = models.URLField("Холбоос", max_length=500)
+    is_active = models.BooleanField("Идэвхтэй эсэх", default=True)
+    order = models.PositiveIntegerField("Дараалал", default=0)
+
+    created_at = models.DateTimeField("Үүсгэсэн огноо", auto_now_add=True)
+    updated_at = models.DateTimeField("Шинэчилсэн огноо", auto_now=True)
+
+    class Meta:
+        verbose_name = "Чухал холбоос"
+        verbose_name_plural = "Чухал холбоосууд"
+        ordering = ["order", "title"]
+
+    def __str__(self):
+        return f"{self.title} ({'идэвхтэй' if self.is_active else 'идэвхгүй'})"

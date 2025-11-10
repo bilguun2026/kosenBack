@@ -1,13 +1,13 @@
 # rest/views.py
-from rest_framework import viewsets
+from rest_framework import viewsets, permissions
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .models import Page, Tag, Content, ContentImage, ContentText, VideoUrl
+from .models import ImportantURL, Page, Tag, Content, ContentImage, ContentText, VideoUrl
 from .serializers import (
-    ContentListSerializer, PageSerializer, TagSerializer, ContentSerializer,
+    ContentListSerializer, ImportantURLSerializer, PageSerializer, TagSerializer, ContentSerializer,
     ContentImageSerializer, ContentTextSerializer, PageNavigationSerializer, VideoSerializer
 )
 
@@ -112,3 +112,11 @@ class CarouselContentListView(generics.ListAPIView):
 class VideoViewSet(ReadOnlyModelViewSet):
     queryset = VideoUrl.objects.all()
     serializer_class = VideoSerializer
+
+
+class ImportantURLViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = ImportantURLSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        return ImportantURL.objects.filter(is_active=True).order_by("order", "title")
