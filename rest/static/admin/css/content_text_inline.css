@@ -1,0 +1,11 @@
+/* Inline блок доторх text field (ckeditor) */
+.inline-group .form-row.field-text .ck-editor,
+.inline-group .form-row.field-text .ck-editor__main {
+  max-width: 900px;
+  margin: 0 auto; /* төвд гаргана */
+}
+
+/* Editable доторх өндөр */
+.inline-group .form-row.field-text .ck-editor__editable_inline {
+  min-height: 280px;
+}

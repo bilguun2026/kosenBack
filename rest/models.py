@@ -135,12 +135,12 @@ class Content(models.Model):
     isPage = models.BooleanField(
         default=False,
         verbose_name='Хуудас эсэх',
-        help_text="Энэ контент хуудсан дээр байна уу?"
+        help_text="Энэ контентийг хуудсан дээр харуулах бол сонгоно уу"
     )
     isCarousel = models.BooleanField(
         default=False,
         verbose_name='Карусель эсэх',
-        help_text="Энэ контент карусель дээр байна уу?"
+        help_text="Энэ контентийг карусель дээр харуулах бол сонгоно уу"
     )
 
     class Meta:

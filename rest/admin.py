@@ -18,31 +18,21 @@ from .models import (
 # ---------- INLINES ----------
 
 
-class ContentInline(admin.TabularInline):
+class ContentTextInline(admin.StackedInline):
     """
-    Inline for Content inside Page.
-    """
-    model = Content
-    extra = 1
-    fields = ("title", "slug", "isPage", "isCarousel", "tags")
-    prepopulated_fields = {"slug": ("title",)}
-    autocomplete_fields = ["tags"]
-    show_change_link = True
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.prefetch_related("tags")
-
-
-class ContentTextInline(admin.TabularInline):
-    """
-    Inline for text blocks inside a Content.
-    CKEditor5 widget is used automatically from the model field.
+    Text блокыг нэг том карт маягаар харуулна.
+    CKEditor5 нь өргөн, төвд гарна.
     """
     model = ContentText
-    extra = 1
+    max_num = 1
+    can_delete = True
     fields = ("text", "order")
     ordering = ("order",)
+
+    class Media:
+        css = {
+            "all": ("admin/css/content_text_inline.css",)
+        }
 
 
 class ContentImageInline(admin.StackedInline):
@@ -50,7 +40,6 @@ class ContentImageInline(admin.StackedInline):
     Single banner image for each Content.
     """
     model = ContentImage
-    extra = 1
     max_num = 1
     can_delete = True
     fields = ("image", "image_preview", "text", "order")
@@ -83,7 +72,6 @@ class PageAdmin(admin.ModelAdmin):
     search_fields = ("title", "subtitle")
     prepopulated_fields = {"slug": ("title",)}
     autocomplete_fields = ["parent"]
-    inlines = [ContentInline]
     list_editable = ("is_published",)
     list_per_page = 25
     ordering = ("-created_at",)
@@ -268,6 +256,6 @@ class VideoUrlAdmin(admin.ModelAdmin):
 class ImportantURLAdmin(admin.ModelAdmin):
     list_display = ("title", "url",  "is_active", "order")
     list_editable = ("is_active", "order")
-    search_fields = ("title", "url" )
+    search_fields = ("title", "url")
     list_filter = ("is_active", )
     ordering = ("order",)
