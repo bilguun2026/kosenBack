@@ -268,39 +268,39 @@ JAZZMIN_SETTINGS = {
         {"name": "Хяналтын самбар", "url": "admin:index",
             "permissions": ["auth.view_user"]},
         # Link to Pages
-        {"model": "yourappname.Page"},
+        {"model": "rest.Page"},
         # Link to News list
-        {"model": "yourappname.NewsContent"},
+        {"model": "rest.NewsContent"},
     ],
 
     # How apps show in the side menu
     "apps": {
-        "yourappname": {
+        "rest": {
             "label": "Агуулга",
             "icon": "fas fa-layer-group",
             "models": [
                 {
-                    "model": "yourappname.Page",
+                    "model": "rest.Page",
                     "name": "Хуудсууд",
                     "icon": "fas fa-sitemap",
                 },
                 {
-                    "model": "yourappname.PageContent",
+                    "model": "rest.PageContent",
                     "name": "Хуудасны контент",
                     "icon": "fas fa-file-alt",
                 },
                 {
-                    "model": "yourappname.NewsContent",
+                    "model": "rest.NewsContent",
                     "name": "Мэдээнүүд",
                     "icon": "fas fa-newspaper",
                 },
                 {
-                    "model": "yourappname.Tag",
+                    "model": "rest.Tag",
                     "name": "Тагууд",
                     "icon": "fas fa-tags",
                 },
                 {
-                    "model": "yourappname.VideoUrl",
+                    "model": "rest.VideoUrl",
                     "name": "Видеонууд",
                     "icon": "fas fa-video",
                 },
