@@ -238,14 +238,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = BASE_DIR / config("MEDIA_ROOT", default="media")
 
 ALLOWED_HOSTS = ['*']
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-CKEDITOR_5_UPLOAD_PATH = "uploads/"
+CKEDITOR_5_UPLOAD_PATH = config("CKEDITOR_5_UPLOAD_PATH", default="uploads/")
 
 
 STATIC_URL = '/static/'
