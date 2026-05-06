@@ -33,6 +33,7 @@ class ContentTextInline(admin.StackedInline):
         css = {
             "all": ("admin/css/content_text_inline.css",)
         }
+        js = ("admin/js/document_import.js",)
 
 
 class ContentImageInline(admin.StackedInline):
