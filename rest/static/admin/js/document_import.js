@@ -10,30 +10,27 @@
         return input ? input.value : '';
     }
 
-    function addImportButton(textareaId, ckEditor) {
-        if (ckEditor.previousElementSibling && ckEditor.previousElementSibling.classList.contains('doc-import-wrapper')) return;
+    var BTN_STYLE = [
+        'padding: 5px 12px',
+        'background: #417690',
+        'color: #fff',
+        'border: none',
+        'border-radius: 4px',
+        'cursor: pointer',
+        'font-size: 12px',
+        'font-family: inherit',
+        'margin-right: 6px',
+    ].join(';');
 
-        var wrapper = document.createElement('div');
-        wrapper.className = 'doc-import-wrapper';
-        wrapper.style.cssText = 'margin-bottom: 6px;';
-
+    function buildButton(label, accept, endpoint, mode, textareaId) {
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.textContent = '📄 PDF / Word импортлох';
-        btn.style.cssText = [
-            'padding: 5px 12px',
-            'background: #417690',
-            'color: #fff',
-            'border: none',
-            'border-radius: 4px',
-            'cursor: pointer',
-            'font-size: 12px',
-            'font-family: inherit',
-        ].join(';');
+        btn.textContent = label;
+        btn.style.cssText = BTN_STYLE;
 
         var fileInput = document.createElement('input');
         fileInput.type = 'file';
-        fileInput.accept = '.pdf,.docx';
+        fileInput.accept = accept;
         fileInput.style.display = 'none';
 
         btn.addEventListener('click', function () { fileInput.click(); });
@@ -49,26 +46,28 @@
             var formData = new FormData();
             formData.append('file', file);
 
-            fetch('/api/import-document/', {
+            fetch(endpoint, {
                 method: 'POST',
                 headers: { 'X-CSRFToken': getCsrfToken() },
                 body: formData,
             })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
-                    if (data.error) {
-                        alert('Алдаа: ' + data.error);
-                        return;
-                    }
+                    if (data.error) { alert('Алдаа: ' + data.error); return; }
                     if (!data.html) return;
 
-                    // django-ckeditor-5 stores instances in window.editors keyed by textarea id
                     if (window.editors && window.editors[textareaId]) {
-                        window.editors[textareaId].setData(data.html);
+                        var editor = window.editors[textareaId];
+                        if (mode === 'append') {
+                            // Append rather than replace so editors can mix sources.
+                            var existing = editor.getData() || '';
+                            editor.setData(existing + data.html);
+                        } else {
+                            editor.setData(data.html);
+                        }
                     } else {
-                        // Fallback: set the textarea value directly
                         var ta = document.getElementById(textareaId);
-                        if (ta) ta.value = data.html;
+                        if (ta) ta.value = (mode === 'append' ? (ta.value || '') : '') + data.html;
                     }
                 })
                 .catch(function (e) { alert('Импортлоход алдаа гарлаа: ' + e.message); })
@@ -79,8 +78,37 @@
                 });
         });
 
-        wrapper.appendChild(btn);
-        wrapper.appendChild(fileInput);
+        var holder = document.createElement('span');
+        holder.appendChild(btn);
+        holder.appendChild(fileInput);
+        return holder;
+    }
+
+    function addImportButton(textareaId, ckEditor) {
+        if (ckEditor.previousElementSibling && ckEditor.previousElementSibling.classList.contains('doc-import-wrapper')) return;
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'doc-import-wrapper';
+        wrapper.style.cssText = 'margin-bottom: 6px;';
+
+        // Text/style extraction (existing behavior).
+        wrapper.appendChild(buildButton(
+            '📄 PDF / Word импортлох',
+            '.pdf,.docx',
+            '/api/import-document/',
+            'replace',
+            textareaId
+        ));
+
+        // New: render each PDF page as an image and insert them into the editor.
+        wrapper.appendChild(buildButton(
+            '🖼️ PDF-ийг зураг болгох',
+            '.pdf',
+            '/api/import-pdf-images/',
+            'append',
+            textareaId
+        ));
+
         ckEditor.parentNode.insertBefore(wrapper, ckEditor);
     }
 

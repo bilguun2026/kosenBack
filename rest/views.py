@@ -4,10 +4,13 @@ import html as html_lib
 import os
 import re
 import shutil
+import uuid
+from pathlib import Path
 import mammoth
 import fitz  # PyMuPDF
 import pytesseract
 from PIL import Image
+from django.conf import settings
 
 # Locate the tesseract binary. Linux/macOS usually have it in PATH; on Windows
 # the UB-Mannheim installer drops it into Program Files but doesn't add to PATH.
@@ -415,3 +418,63 @@ class ImportDocumentView(View):
             html.append('</tr>')
         html.append('</tbody></table></figure>')
         return ''.join(html)
+
+
+@method_decorator(staff_member_required, name='dispatch')
+class ImportPDFAsImagesView(View):
+    """Render each PDF page as a PNG and return HTML that drops the images
+    into the editor. Lets editors paste a multi-page PDF and get one image per
+    page in the content, without any text extraction or OCR."""
+
+    DPI = 150          # render quality (72 = print default, 150 = sharp on screen)
+    JPEG_FOR_SCANS = True   # save scanned pages as JPEG to keep file size sane
+
+    def post(self, request):
+        uploaded = request.FILES.get('file')
+        if not uploaded:
+            return JsonResponse({'error': 'No file provided'}, status=400)
+        if not uploaded.name.lower().endswith('.pdf'):
+            return JsonResponse({'error': 'Only PDF files are supported'}, status=400)
+        try:
+            html = self._pdf_to_image_html(uploaded)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'html': html})
+
+    def _pdf_to_image_html(self, file):
+        doc = fitz.open(stream=file.read(), filetype='pdf')
+        batch_id = uuid.uuid4().hex[:12]
+        out_dir = Path(settings.MEDIA_ROOT) / 'pdf_imports' / batch_id
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        media_url = (settings.MEDIA_URL or '/media/').rstrip('/')
+        zoom = self.DPI / 72
+        mat = fitz.Matrix(zoom, zoom)
+
+        parts = []
+        for idx, page in enumerate(doc, 1):
+            pix = page.get_pixmap(matrix=mat, alpha=False)
+            # JPEG for scans (smaller), PNG otherwise (sharper text).
+            use_jpeg = self.JPEG_FOR_SCANS and self._is_scanned_page(page)
+            ext = 'jpg' if use_jpeg else 'png'
+            filename = f'page_{idx:03d}.{ext}'
+            filepath = out_dir / filename
+            if use_jpeg:
+                pix.pil_save(str(filepath), format='JPEG', quality=85, optimize=True)
+            else:
+                pix.save(str(filepath))
+            url = f'{media_url}/pdf_imports/{batch_id}/{filename}'
+            parts.append(
+                f'<p style="text-align:center">'
+                f'<img src="{url}" alt="Page {idx}" style="max-width:100%;height:auto" />'
+                f'</p>'
+            )
+        doc.close()
+        return ''.join(parts)
+
+    def _is_scanned_page(self, page):
+        """Heuristic: a page is treated as scanned if it has no real text content."""
+        try:
+            return not page.get_text('text').strip()
+        except Exception:
+            return False

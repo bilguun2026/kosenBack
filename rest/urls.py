@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CarouselContentListView, ImportantURLViewSet, InfoCardViewSet, PageViewSet, TagViewSet, ContentViewSet,
     ContentImageViewSet, ContentTextViewSet, PageNavigationViewSet, VideoViewSet,
-    ImportDocumentView,
+    ImportDocumentView, ImportPDFAsImagesView,
 )
 
 router = DefaultRouter()
@@ -24,4 +24,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path('carousel/', CarouselContentListView.as_view(), name='carousel-contents'),
     path('import-document/', ImportDocumentView.as_view(), name='import-document'),
+    path('import-pdf-images/', ImportPDFAsImagesView.as_view(), name='import-pdf-images'),
 ]
