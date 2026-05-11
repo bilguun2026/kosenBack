@@ -1,11 +1,20 @@
 # rest/views.py
-import io
+import base64
+import html as html_lib
+import os
 import re
-from collections import Counter
+import shutil
 import mammoth
 import fitz  # PyMuPDF
 import pytesseract
 from PIL import Image
+
+# Locate the tesseract binary. Linux/macOS usually have it in PATH; on Windows
+# the UB-Mannheim installer drops it into Program Files but doesn't add to PATH.
+_tesseract_cmd = os.environ.get("TESSERACT_CMD") or shutil.which("tesseract") \
+    or r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+if os.path.exists(_tesseract_cmd):
+    pytesseract.pytesseract.tesseract_cmd = _tesseract_cmd
 from django.views import View
 from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
@@ -162,18 +171,46 @@ class ImportDocumentView(View):
         return JsonResponse({'html': html})
 
     def _docx_to_html(self, file):
-        result = mammoth.convert_to_html(file)
+        # Embed images as base64 so the editor doesn't lose them, and keep
+        # mammoth's default direct-formatting preservation (bold, italic,
+        # underline, lists, tables, hyperlinks).
+        def _img_handler(image):
+            with image.open() as src:
+                data = src.read()
+            b64 = base64.b64encode(data).decode('ascii')
+            return {"src": f"data:{image.content_type};base64,{b64}"}
+
+        # A small style map: keep heading semantics from Word + common emphases.
+        style_map = """
+        p[style-name='Title'] => h1.doc-title:fresh
+        p[style-name='Subtitle'] => h2.doc-subtitle:fresh
+        p[style-name='Heading 1'] => h1:fresh
+        p[style-name='Heading 2'] => h2:fresh
+        p[style-name='Heading 3'] => h3:fresh
+        p[style-name='Heading 4'] => h4:fresh
+        p[style-name='Quote'] => blockquote > p:fresh
+        r[style-name='Strong'] => strong
+        r[style-name='Emphasis'] => em
+        """
+        result = mammoth.convert_to_html(
+            file,
+            convert_image=mammoth.images.img_element(_img_handler),
+            style_map=style_map,
+        )
         return result.value
 
     def _pdf_to_html(self, file):
         parts = []
         doc = fitz.open(stream=file.read(), filetype='pdf')
         for page in doc:
+            page_width = page.rect.width
             raw = page.get_text('dict', flags=fitz.TEXT_PRESERVE_WHITESPACE)
-            text_blocks = [b for b in raw.get('blocks', []) if b.get('type') == 0]
+            blocks = raw.get('blocks', [])
+            text_blocks = [b for b in blocks if b.get('type') == 0]
+            image_blocks = [b for b in blocks if b.get('type') == 1]
 
-            if text_blocks:
-                # Detect table bounding boxes so we skip those blocks below
+            if text_blocks or image_blocks:
+                # Detect table bounding boxes so we skip those text blocks below
                 table_bboxes = []
                 try:
                     for tbl in page.find_tables().tables:
@@ -182,18 +219,26 @@ class ImportDocumentView(View):
                 except Exception:
                     pass
 
-                body_size = self._body_font_size(text_blocks)
-
+                # Render in the order they appear on the page (top-to-bottom, left-to-right).
+                renderables = []
                 for block in text_blocks:
-                    # Skip blocks that fall inside a table area
                     block_rect = fitz.Rect(block['bbox'])
                     if any(block_rect.intersects(tr) for tr in table_bboxes):
                         continue
-                    html = self._block_to_html(block, body_size)
+                    renderables.append((block['bbox'][1], block['bbox'][0], 'text', block))
+                for block in image_blocks:
+                    renderables.append((block['bbox'][1], block['bbox'][0], 'image', block))
+                renderables.sort(key=lambda x: (x[0], x[1]))
+
+                for _y, _x, kind, block in renderables:
+                    if kind == 'text':
+                        html = self._block_to_html(block, page_width)
+                    else:
+                        html = self._image_block_to_html(block)
                     if html:
                         parts.append(html)
             else:
-                # Image-based page — OCR with Mongolian + English
+                # Fully image-based page (scanned) — fall back to OCR.
                 mat = fitz.Matrix(2, 2)
                 pix = page.get_pixmap(matrix=mat)
                 img = Image.frombytes('RGB', [pix.width, pix.height], pix.samples)
@@ -201,95 +246,172 @@ class ImportDocumentView(View):
                 for line in ocr_text.split('\n'):
                     line = line.strip()
                     if line:
-                        parts.append(f'<p>{line}</p>')
+                        parts.append(f'<p>{html_lib.escape(line)}</p>')
 
         doc.close()
         return ''.join(parts)
 
     # ------------------------------------------------------------------ helpers
 
-    def _body_font_size(self, text_blocks):
-        sizes = [
-            round(span['size'])
-            for block in text_blocks
-            for line in block.get('lines', [])
-            for span in line.get('spans', [])
-            if span.get('text', '').strip()
-        ]
-        return Counter(sizes).most_common(1)[0][0] if sizes else 12
+    def _color_to_hex(self, color_int):
+        """PyMuPDF color int (0xRRGGBB) → '#rrggbb'."""
+        if not color_int:
+            return '#000000'
+        r = (color_int >> 16) & 0xFF
+        g = (color_int >> 8) & 0xFF
+        b = color_int & 0xFF
+        return f'#{r:02x}{g:02x}{b:02x}'
+
+    def _clean_font_name(self, font):
+        """Strip subset prefixes like 'ABCDEF+Arial-Bold' → 'Arial'."""
+        if not font:
+            return ''
+        # Drop subset prefix "ABCDEF+"
+        if '+' in font:
+            font = font.split('+', 1)[1]
+        # Drop weight/style suffix "-Bold", "-Italic", etc.
+        font = re.split(r'[-,]', font, maxsplit=1)[0]
+        return font.strip()
 
     def _span_to_html(self, span):
-        text = span.get('text', '')
-        if not text.strip():
-            return text  # preserve spaces
+        """Wrap span text in inline-styled <span>, with <strong>/<em>/<u> as needed."""
+        raw = span.get('text', '')
+        if not raw:
+            return ''
+        # Preserve whitespace-only spans literally (no styling needed).
+        if not raw.strip():
+            return html_lib.escape(raw).replace(' ', '&nbsp;')
+
+        text = html_lib.escape(raw)
 
         flags = span.get('flags', 0)
-        font = span.get('font', '').lower()
-        is_bold = bool(flags & 16) or 'bold' in font
-        is_italic = bool(flags & 2) or 'italic' in font or 'oblique' in font
+        font = span.get('font', '') or ''
+        font_lower = font.lower()
+        # PyMuPDF flag bits: 1=superscript, 2=italic, 4=serif, 8=mono, 16=bold
+        is_bold = bool(flags & 16) or any(s in font_lower for s in ('bold', 'black', 'heavy'))
+        is_italic = bool(flags & 2) or 'italic' in font_lower or 'oblique' in font_lower
+        is_super = bool(flags & 1)
 
+        styles = []
+        size = span.get('size')
+        if size:
+            styles.append(f'font-size:{size:.1f}pt')
+        color_hex = self._color_to_hex(span.get('color', 0))
+        if color_hex != '#000000':
+            styles.append(f'color:{color_hex}')
+        clean_font = self._clean_font_name(font)
+        if clean_font:
+            styles.append(f"font-family:'{clean_font}', sans-serif")
+
+        if styles:
+            text = f'<span style="{";".join(styles)}">{text}</span>'
         if is_bold:
             text = f'<strong>{text}</strong>'
         if is_italic:
             text = f'<em>{text}</em>'
+        if is_super:
+            text = f'<sup>{text}</sup>'
         return text
 
-    def _block_to_html(self, block, body_size):
-        spans_flat = [
-            span
-            for line in block.get('lines', [])
-            for span in line.get('spans', [])
-            if span.get('text', '').strip()
-        ]
-        if not spans_flat:
+    def _line_alignment(self, lines, page_width):
+        """Detect block alignment by averaging line left/right margins."""
+        lefts, rights = [], []
+        for line in lines:
+            bbox = line.get('bbox')
+            if not bbox:
+                continue
+            lefts.append(bbox[0])
+            rights.append(page_width - bbox[2])
+        if not lefts:
+            return 'left'
+        avg_left = sum(lefts) / len(lefts)
+        avg_right = sum(rights) / len(rights)
+        # Centered: comparable left and right margins, both > 0.
+        if abs(avg_left - avg_right) < 8 and avg_left > 20:
+            return 'center'
+        # Right aligned: large left margin, tiny right margin.
+        if avg_right < 8 and avg_left > 40:
+            return 'right'
+        return 'left'
+
+    def _block_to_html(self, block, page_width):
+        lines = block.get('lines', [])
+        if not lines:
             return ''
 
-        avg_size = sum(s['size'] for s in spans_flat) / len(spans_flat)
+        align = self._line_alignment(lines, page_width)
 
-        # Build content line by line
+        # Build line-by-line, preserving original line breaks within the block.
         line_htmls = []
-        for line in block.get('lines', []):
+        for line in lines:
             inline = ''.join(self._span_to_html(s) for s in line.get('spans', []))
             if inline.strip():
-                line_htmls.append(inline.strip())
-
+                line_htmls.append(inline)
         if not line_htmls:
             return ''
 
-        content = ' '.join(line_htmls)
-        first_line = line_htmls[0]
+        content = '<br>'.join(line_htmls)
 
-        # Heading detection by relative font size
-        if avg_size >= body_size * 1.8:
-            return f'<h2>{content}</h2>'
-        if avg_size >= body_size * 1.4:
-            return f'<h3>{content}</h3>'
-        if avg_size >= body_size * 1.15:
-            return f'<h4>{content}</h4>'
+        # List detection (only when the block actually starts with a bullet/number).
+        first_line_plain = self._strip_tags(line_htmls[0])
+        if re.match(r'^[•·▪◦●\-–*]\s', first_line_plain):
+            item = re.sub(r'^[•·▪◦●\-–*]\s*', '', content, count=1)
+            style = f' style="text-align:{align}"' if align != 'left' else ''
+            return f'<ul{style}><li>{item}</li></ul>'
+        if re.match(r'^(\d+[\.\)]|[a-zA-Z][\.\)])\s', first_line_plain):
+            item = re.sub(r'^[\w]+[\.\)]\s*', '', content, count=1)
+            style = f' style="text-align:{align}"' if align != 'left' else ''
+            return f'<ol{style}><li>{item}</li></ol>'
 
-        # Unordered list item
-        if re.match(r'^[•·\-–*]\s', first_line):
-            item = re.sub(r'^[•·\-–*]\s*', '', content)
-            return f'<ul><li>{item}</li></ul>'
+        style_attr = f' style="text-align:{align}"' if align != 'left' else ''
+        return f'<p{style_attr}>{content}</p>'
 
-        # Ordered list item  (1. / 1) / a. etc.)
-        if re.match(r'^(\d+[\.\)]|[a-zA-Z][\.\)])\s', first_line):
-            item = re.sub(r'^[\w]+[\.\)]\s*', '', content)
-            return f'<ol><li>{item}</li></ol>'
+    def _strip_tags(self, html_str):
+        return re.sub(r'<[^>]+>', '', html_str)
 
-        return f'<p>{content}</p>'
+    def _image_block_to_html(self, block):
+        """Embed an inline raster image from PyMuPDF as base64."""
+        try:
+            data = block.get('image')
+            if not data:
+                return ''
+            ext = block.get('ext') or 'png'
+            mime = f'image/{ext}'
+            b64 = base64.b64encode(data).decode('ascii')
+            width = block.get('width') or ''
+            height = block.get('height') or ''
+            size_attr = ''
+            if width and height:
+                size_attr = f' width="{int(width)}" height="{int(height)}"'
+            return f'<p style="text-align:center"><img src="data:{mime};base64,{b64}"{size_attr} /></p>'
+        except Exception:
+            return ''
 
     def _table_to_html(self, tbl):
         rows = tbl.extract()
         if not rows:
             return ''
-        html = ['<figure class="table"><table><tbody>']
-        for i, row in enumerate(rows):
+        # Read styled cells from the first row to seed header detection: a row is
+        # treated as a header if every cell is non-empty and short.
+        header_idx = 0 if all((c or '').strip() for c in rows[0]) else -1
+        html = ['<figure class="table"><table style="border-collapse:collapse;width:100%">']
+        if header_idx == 0:
+            html.append('<thead><tr>')
+            for cell in rows[0]:
+                cell_text = html_lib.escape((cell or '').strip())
+                html.append(
+                    f'<th style="border:1px solid #999;padding:6px;background:#f3f3f3">{cell_text}</th>'
+                )
+            html.append('</tr></thead>')
+        html.append('<tbody>')
+        body_rows = rows[1:] if header_idx == 0 else rows
+        for row in body_rows:
             html.append('<tr>')
-            tag = 'th' if i == 0 else 'td'
             for cell in row:
-                cell_text = (cell or '').strip()
-                html.append(f'<{tag}>{cell_text}</{tag}>')
+                cell_text = html_lib.escape((cell or '').strip()).replace('\n', '<br>')
+                html.append(
+                    f'<td style="border:1px solid #999;padding:6px;vertical-align:top">{cell_text}</td>'
+                )
             html.append('</tr>')
         html.append('</tbody></table></figure>')
         return ''.join(html)
