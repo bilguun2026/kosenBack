@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.utils import timezone
 from django.utils.text import slugify
 from django_ckeditor_5.fields import CKEditor5Field
 
@@ -127,9 +128,7 @@ class Content(models.Model):
         verbose_name='Холбогдсон хуудас'
     )
     created_at = models.DateTimeField(
-        auto_now_add=True,
-        null=True,
-        blank=True,
+        default=timezone.now,
         verbose_name='Үүсгэсэн огноо'
     )
     isPage = models.BooleanField(
@@ -278,3 +277,33 @@ class ImportantURL(models.Model):
 
     def __str__(self):
         return f"{self.title} ({'идэвхтэй' if self.is_active else 'идэвхгүй'})"
+
+
+class InfoCard(models.Model):
+    ICON_CHOICES = [
+        ('graduation', 'Төгсөлт (graduation cap)'),
+        ('teacher', 'Багш (chalkboard teacher)'),
+        ('university', 'Их сургууль (university)'),
+        ('book', 'Ном (book)'),
+        ('star', 'Од (star)'),
+        ('globe', 'Дэлхий (globe)'),
+    ]
+
+    title = models.CharField("Гарчиг", max_length=100)
+    description = models.TextField("Тайлбар")
+    icon = models.CharField(
+        "Дүрс",
+        max_length=50,
+        choices=ICON_CHOICES,
+        default='graduation',
+    )
+    order = models.PositiveIntegerField("Дараалал", default=0)
+    is_active = models.BooleanField("Идэвхтэй эсэх", default=True)
+
+    class Meta:
+        verbose_name = "Мэдээллийн карт"
+        verbose_name_plural = "Мэдээллийн картууд"
+        ordering = ["order"]
+
+    def __str__(self):
+        return self.title

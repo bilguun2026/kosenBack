@@ -4,6 +4,7 @@ from django.urls import reverse
 
 from .models import (
     ImportantURL,
+    InfoCard,
     Page,
     Tag,
     Content,
@@ -33,7 +34,7 @@ class ContentTextInline(admin.StackedInline):
         css = {
             "all": ("admin/css/content_text_inline.css",)
         }
-        js = ("admin/js/document_import.js",)
+        js = ("admin/js/document_import.js", "admin/js/file_import.js",)
 
 
 class ContentImageInline(admin.StackedInline):
@@ -194,7 +195,7 @@ class NewsContentAdmin(BaseContentAdmin):
 
     fieldsets = (
         (None, {
-            "fields": ("title", "slug", "description"),
+            "fields": ("title", "slug", "description", "created_at"),
         }),
         ("Мэдээний тохиргоо", {
             "fields": ("isCarousel", "tags"),
@@ -259,4 +260,12 @@ class ImportantURLAdmin(admin.ModelAdmin):
     list_editable = ("is_active", "order")
     search_fields = ("title", "url")
     list_filter = ("is_active", )
+    ordering = ("order",)
+
+
+@admin.register(InfoCard)
+class InfoCardAdmin(admin.ModelAdmin):
+    list_display = ("title", "icon", "order", "is_active")
+    list_editable = ("order", "is_active")
+    list_filter = ("is_active", "icon")
     ordering = ("order",)

@@ -16,9 +16,9 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .models import ImportantURL, Page, Tag, Content, ContentImage, ContentText, VideoUrl
+from .models import ImportantURL, InfoCard, Page, Tag, Content, ContentImage, ContentText, VideoUrl
 from .serializers import (
-    ContentListSerializer, ImportantURLSerializer, PageSerializer, TagSerializer, ContentSerializer,
+    ContentListSerializer, ImportantURLSerializer, InfoCardSerializer, PageSerializer, TagSerializer, ContentSerializer,
     ContentImageSerializer, ContentTextSerializer, PageNavigationSerializer, VideoSerializer
 )
 
@@ -131,6 +131,14 @@ class ImportantURLViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return ImportantURL.objects.filter(is_active=True).order_by("order", "title")
+
+
+class InfoCardViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = InfoCardSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        return InfoCard.objects.filter(is_active=True).order_by("order")
 
 
 @method_decorator(staff_member_required, name='dispatch')
