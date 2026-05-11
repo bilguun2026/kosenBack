@@ -57,45 +57,74 @@ sudo systemctl restart kosenback.service     # эсвэл өөрийн серв�
 
 ---
 
-## 3.1 Gunicorn timeout-ийг нэмэгдүүлэх (заавал)
+## 3.1 Gunicorn timeout-ийг нэмэгдүүлэх (ЗААВАЛ)
 
 OCR хийх (зурган PDF) ажиллагаа 1–5 минут үргэлжилж болзошгүй. Gunicorn-ийн анхдагч timeout нь 30 секунд тул боловсруулалт дуусахаас өмнө worker-ийг таслаж **500 алдаа** буцаана. Лог дотор `handle_abort` ба `SystemExit: 1` гарч ирвэл энэ нь яг тэр асуудал.
 
+### Алхам 1: Өөрийн gunicorn service файлыг олох
+
+Service-ийн нэр тус бүр өөр өөр байж болно (`kosenback`, `gunicorn`, эсвэл бусад). Эхлээд олно:
+
 ```bash
-sudo nano /etc/systemd/system/kosenback.service
+sudo systemctl list-units --type=service | grep -iE 'gunicorn|kosen'
 ```
 
-`ExecStart=` мөрөнд `--timeout 300` нэмнэ:
+Гарсан нэрийг тэмдэглэж аваад service файлд хандана (жишээ нь `gunicorn.service`):
+
+```bash
+sudo systemctl cat gunicorn.service     # одоогийн агуулгыг харна
+sudo nano /etc/systemd/system/gunicorn.service
+```
+
+### Алхам 2: Одоо байгаа `ExecStart=` мөрөнд `--timeout 300` НЭМНЭ
+
+> ⚠️ **Анхааруулга**: Бүх мөрийг солих хэрэггүй. Өөрийн серверт байгаа замуудаа (venv, socket) **хэвээр нь үлдээх ёстой**, зөвхөн `--timeout 300` гэдгийг нэмнэ.
+
+**Жишээ нь, одоо ийм байж магадгүй:**
 
 ```ini
-ExecStart=/var/www/kosenBack/base/venv/bin/gunicorn \
-          --timeout 300 \
+ExecStart=/home/youruser/path/to/venv/bin/gunicorn \
           --workers 3 \
-          --bind unix:/run/kosenback.sock \
+          --bind unix:/run/gunicorn.sock \
           base.wsgi:application
 ```
 
-Тэгээд:
+**Үүнийг ийм болгож засна** (зөвхөн `--timeout 300` мөр нэмэгдсэн):
+
+```ini
+ExecStart=/home/youruser/path/to/venv/bin/gunicorn \
+          --timeout 300 \
+          --workers 3 \
+          --bind unix:/run/gunicorn.sock \
+          base.wsgi:application
+```
+
+### Алхам 3: Сервисийг дахин ачаалах
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl restart kosenback.service
+sudo systemctl restart gunicorn.service       # эсвэл өөрийн service-ийн нэр
+sudo systemctl status gunicorn.service        # `active (running)` байх ёстой
 ```
 
-**Nginx-ийн timeout-ийг мөн адил тохируулна** (өмнө нь Nginx 504 алдаа буцаахгүйн тулд):
+### Алхам 4: Nginx-ийн timeout-ийг мөн нэмэгдүүлнэ (504 алдаа гарахаас сэргийлнэ)
 
 ```bash
-sudo nano /etc/nginx/sites-available/kosenback
+sudo nano /etc/nginx/sites-available/<your-site>
 ```
 
-`location /` блокдоо нэмнэ:
+`location /` блок дотор дараах мөрийг нэмнэ (хэрэв байхгүй бол):
 
 ```nginx
-proxy_read_timeout 300s;
-proxy_send_timeout 300s;
+location / {
+    include proxy_params;
+    proxy_pass http://unix:/run/gunicorn.sock;
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+}
 ```
 
-Дараа нь:
+Тестлэх ба reload:
 
 ```bash
 sudo nginx -t && sudo systemctl reload nginx
