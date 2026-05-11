@@ -84,6 +84,71 @@
         return holder;
     }
 
+    function escapeHtml(s) {
+        return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function buildLinkUploadButton(label, accept, endpoint, textareaId) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = label;
+        btn.style.cssText = BTN_STYLE;
+
+        var fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = accept;
+        fileInput.style.display = 'none';
+
+        btn.addEventListener('click', function () { fileInput.click(); });
+
+        fileInput.addEventListener('change', function () {
+            var file = this.files[0];
+            if (!file) return;
+
+            var originalText = btn.textContent;
+            btn.textContent = 'Хуулж байна...';
+            btn.disabled = true;
+
+            var formData = new FormData();
+            formData.append('file', file);
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCsrfToken() },
+                body: formData,
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.error) { alert('Алдаа: ' + data.error); return; }
+                    if (!data.url) return;
+
+                    var name = escapeHtml(data.filename || 'PDF файл');
+                    var href = escapeHtml(data.url);
+                    var linkHtml = '<p><a href="' + href + '" target="_blank" rel="noopener">📎 ' + name + '</a></p>';
+
+                    if (window.editors && window.editors[textareaId]) {
+                        var editor = window.editors[textareaId];
+                        editor.setData((editor.getData() || '') + linkHtml);
+                    } else {
+                        var ta = document.getElementById(textareaId);
+                        if (ta) ta.value = (ta.value || '') + linkHtml;
+                    }
+                })
+                .catch(function (e) { alert('Хуулахад алдаа гарлаа: ' + e.message); })
+                .finally(function () {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    fileInput.value = '';
+                });
+        });
+
+        var holder = document.createElement('span');
+        holder.appendChild(btn);
+        holder.appendChild(fileInput);
+        return holder;
+    }
+
     function addImportButton(textareaId, ckEditor) {
         if (ckEditor.previousElementSibling && ckEditor.previousElementSibling.classList.contains('doc-import-wrapper')) return;
 
@@ -100,12 +165,20 @@
             textareaId
         ));
 
-        // New: render each PDF page as an image and insert them into the editor.
+        // Render each PDF page as an image and insert them into the editor.
         wrapper.appendChild(buildButton(
             '🖼️ PDF-ийг зураг болгох',
             '.pdf',
             '/api/import-pdf-images/',
             'append',
+            textareaId
+        ));
+
+        // Upload PDF to media and insert as a link (opens in browser PDF viewer).
+        wrapper.appendChild(buildLinkUploadButton(
+            '📎 PDF файл холбоосоор оруулах',
+            '.pdf',
+            '/api/upload-pdf/',
             textareaId
         ));
 

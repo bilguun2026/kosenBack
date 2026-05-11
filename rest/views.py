@@ -478,3 +478,36 @@ class ImportPDFAsImagesView(View):
             return not page.get_text('text').strip()
         except Exception:
             return False
+
+
+@method_decorator(staff_member_required, name='dispatch')
+class UploadPDFView(View):
+    """Save an uploaded PDF to media and return an absolute URL the editor
+    can link to. The browser's built-in PDF viewer opens the file directly."""
+
+    def post(self, request):
+        uploaded = request.FILES.get('file')
+        if not uploaded:
+            return JsonResponse({'error': 'No file provided'}, status=400)
+        if not uploaded.name.lower().endswith('.pdf'):
+            return JsonResponse({'error': 'Only PDF files are supported'}, status=400)
+
+        # Keep the original filename but stick it under a unique folder to
+        # avoid collisions and to make orphan cleanup easier later.
+        batch_id = uuid.uuid4().hex[:12]
+        safe_name = re.sub(r'[^A-Za-z0-9._\-]+', '_', uploaded.name)
+        out_dir = Path(settings.MEDIA_ROOT) / 'pdfs' / batch_id
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / safe_name
+        with open(out_path, 'wb') as fh:
+            for chunk in uploaded.chunks():
+                fh.write(chunk)
+
+        media_url = (settings.MEDIA_URL or '/media/').rstrip('/')
+        relative = f'{media_url}/pdfs/{batch_id}/{safe_name}'
+        absolute = request.build_absolute_uri(relative)
+        return JsonResponse({
+            'url': absolute,
+            'filename': uploaded.name,
+            'size': uploaded.size,
+        })
