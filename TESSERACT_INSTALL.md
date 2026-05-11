@@ -57,6 +57,52 @@ sudo systemctl restart kosenback.service     # эсвэл өөрийн серв�
 
 ---
 
+## 3.1 Gunicorn timeout-ийг нэмэгдүүлэх (заавал)
+
+OCR хийх (зурган PDF) ажиллагаа 1–5 минут үргэлжилж болзошгүй. Gunicorn-ийн анхдагч timeout нь 30 секунд тул боловсруулалт дуусахаас өмнө worker-ийг таслаж **500 алдаа** буцаана. Лог дотор `handle_abort` ба `SystemExit: 1` гарч ирвэл энэ нь яг тэр асуудал.
+
+```bash
+sudo nano /etc/systemd/system/kosenback.service
+```
+
+`ExecStart=` мөрөнд `--timeout 300` нэмнэ:
+
+```ini
+ExecStart=/var/www/kosenBack/base/venv/bin/gunicorn \
+          --timeout 300 \
+          --workers 3 \
+          --bind unix:/run/kosenback.sock \
+          base.wsgi:application
+```
+
+Тэгээд:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart kosenback.service
+```
+
+**Nginx-ийн timeout-ийг мөн адил тохируулна** (өмнө нь Nginx 504 алдаа буцаахгүйн тулд):
+
+```bash
+sudo nano /etc/nginx/sites-available/kosenback
+```
+
+`location /` блокдоо нэмнэ:
+
+```nginx
+proxy_read_timeout 300s;
+proxy_send_timeout 300s;
+```
+
+Дараа нь:
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+---
+
 ## 4. Тестлэх
 
 Админ хуудсанд орж, контент үүсгэх форм дотор **📄 PDF / Word импортлох** товчийг дарж PDF файл сонгоно. Алдаагүй текст харагдвал амжилттай.
@@ -69,6 +115,8 @@ sudo systemctl restart kosenback.service     # эсвэл өөрийн серв�
 |-------|--------|
 | `tesseract is not installed or it's not in your PATH` | `sudo apt install -y tesseract-ocr` дахин ажиллуулна, `which tesseract` шалгана (`/usr/bin/tesseract` гарах ёстой) |
 | `Error opening data file ... mon.traineddata` | Монгол хэлний package дутуу: `sudo apt install -y tesseract-ocr-mon` |
+| `500 Internal Server Error` + лог дотор `handle_abort`, `SystemExit: 1` | Gunicorn worker timeout. `--timeout 300` нэмнэ (3.1-р хэсгийг үзнэ үү) |
+| `504 Gateway Time-out` | Nginx-ийн `proxy_read_timeout` богино. 300s болгож нэмэгдүүлнэ (3.1-р хэсэг) |
 | Текст танигдсан боловч муухай гарч байна | PDF нь чанар муутай зурагт байна. Хариу хэвлэгдсэн эсвэл скан хийсэн чанар сайтай PDF ашиглана уу |
 
 ---
