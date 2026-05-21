@@ -182,7 +182,92 @@
             textareaId
         ));
 
+        // Helper text — drag/drop-р PDF орохгүй гэдгийг сэрэмжлүүлэх
+        var hint = document.createElement('div');
+        hint.style.cssText = 'font-size: 11px; color: #777; margin-top: 4px; font-style: italic;';
+        hint.textContent = '💡 Зөвлөмж: PDF / Word файлыг editor руу чирж оруулахгүй, дээрх товчлууруудаас ашиглана уу.';
+        wrapper.appendChild(hint);
+
         ckEditor.parentNode.insertBefore(wrapper, ckEditor);
+
+        // PDF/DOCX-ийг editor руу drag-drop хийсэн тохиолдолд CKEditor-ийн
+        // image uploader-руу гарахаас өмнө таслан авч, upload-pdf endpoint
+        // руу автомат шилжүүлнэ. Энэ нь "Couldn't upload file" алдаа гарахаас сэргийлнэ.
+        attachDragDropInterceptor(ckEditor, textareaId);
+    }
+
+    function isHandledNonImage(file) {
+        if (!file) return false;
+        var name = (file.name || '').toLowerCase();
+        return name.endsWith('.pdf') || name.endsWith('.doc') || name.endsWith('.docx');
+    }
+
+    function attachDragDropInterceptor(ckEditor, textareaId) {
+        var editable = ckEditor.querySelector('.ck-editor__editable');
+        if (!editable || editable.__pdfInterceptorAttached) return;
+        editable.__pdfInterceptorAttached = true;
+
+        editable.addEventListener('drop', function (e) {
+            var files = (e.dataTransfer && e.dataTransfer.files) || [];
+            if (!files.length) return;
+            // Drop-той файл бүх PDF/Word эсэх — байвал CKEditor-руу хүргэхээс өмнө таслана
+            var allHandled = Array.prototype.every.call(files, isHandledNonImage);
+            if (!allHandled) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            Array.prototype.forEach.call(files, function (file) {
+                uploadFileAndInsertLink(file, textareaId);
+            });
+        }, true);
+
+        editable.addEventListener('paste', function (e) {
+            var items = (e.clipboardData && e.clipboardData.items) || [];
+            for (var i = 0; i < items.length; i++) {
+                var f = items[i].getAsFile && items[i].getAsFile();
+                if (f && isHandledNonImage(f)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    uploadFileAndInsertLink(f, textareaId);
+                    return;
+                }
+            }
+        }, true);
+    }
+
+    function uploadFileAndInsertLink(file, textareaId) {
+        var formData = new FormData();
+        formData.append('file', file);
+
+        var isPdf = (file.name || '').toLowerCase().endsWith('.pdf');
+        var endpoint = isPdf ? '/api/upload-pdf/' : '/api/import-document/';
+
+        fetch(endpoint, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() },
+            body: formData,
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.error) { alert('Алдаа: ' + data.error); return; }
+
+                if (isPdf && data.url) {
+                    var name = escapeHtml(data.filename || 'PDF файл');
+                    var href = escapeHtml(data.url);
+                    var linkHtml = '<p><a href="' + href + '" target="_blank" rel="noopener">📎 ' + name + '</a></p>';
+                    if (window.editors && window.editors[textareaId]) {
+                        var editor = window.editors[textareaId];
+                        editor.setData((editor.getData() || '') + linkHtml);
+                    }
+                } else if (data.html) {
+                    if (window.editors && window.editors[textareaId]) {
+                        var editor2 = window.editors[textareaId];
+                        editor2.setData((editor2.getData() || '') + data.html);
+                    }
+                }
+            })
+            .catch(function (e) { alert('Хуулахад алдаа гарлаа: ' + e.message); });
     }
 
     function findTextareaIdForEditor(ckEditor) {
