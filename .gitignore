@@ -18,19 +18,20 @@ env.bak/
 # Environment variables
 # -------------------------
 .env
+# Keep .env.example tracked
 
 # -------------------------
 # Django stuff
 # -------------------------
-
-# If you REALLY want to ignore all migrations (not recommended for teams)
-migrations/
+# NOTE: migrations MUST be committed. Do NOT add migrations/ here.
 
 # Collected static files (run by collectstatic)
 staticfiles/
 
-# User-uploaded media
-media/
+# User-uploaded media (production media should live on persistent storage,
+# but keep the folder structure with .gitkeep)
+media/*
+!media/.gitkeep
 
 # SQLite DB (if you use it locally)
 db.sqlite3
@@ -48,4 +49,3 @@ db.sqlite3
 # -------------------------
 .DS_Store
 Thumbs.db
-*/migrations/
